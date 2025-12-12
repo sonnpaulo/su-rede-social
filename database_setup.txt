@@ -1,0 +1,32 @@
+COPIE E COLE O CODIGO ABAIXO NO "SQL EDITOR" DO SUPABASE E CLIQUE EM "RUN":
+
+-- 1. Cria a tabela de marcas (Armazena a identidade visual e tom de voz)
+CREATE TABLE IF NOT EXISTS brands (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  name TEXT,
+  website TEXT,
+  instagram TEXT,
+  description TEXT,
+  colors TEXT[],
+  tone_of_voice TEXT,
+  niche TEXT,
+  target_audience TEXT,
+  gemini_api_key TEXT -- Nova coluna para a chave de API (Usuario assume responsabilidade)
+);
+
+-- 2. Cria a tabela de posts (Armazena o histórico para a IA não repetir conteúdo)
+CREATE TABLE IF NOT EXISTS posts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  topic TEXT,
+  content TEXT,
+  type TEXT,
+  platform TEXT
+);
+
+-- 3. IMPORTANTE: Desativa a segurança (RLS) para o MVP funcionar sem login complexo
+ALTER TABLE brands DISABLE ROW LEVEL SECURITY;
+ALTER TABLE posts DISABLE ROW LEVEL SECURITY;
+
+-- FIM DO CODIGO

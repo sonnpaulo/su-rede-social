@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#ff6e40" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <title>Su Rede Social - Painel de Controle</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Poppins', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                50: '#fff7ed',  /* Laranja muito claro */
+                100: '#ffedd5',
+                200: '#fed7aa',
+                300: '#fdba74',
+                400: '#fb923c',
+                500: '#ff6e40', /* COR PRINCIPAL SÚ CONTROLE (#ff6e40) */
+                600: '#ea580c',
+                700: '#c2410c',
+                800: '#9a3412',
+                900: '#1a1a2e', /* COR SECUNDÁRIA (DARK BLUE) (#1a1a2e) */
+              },
+              secondary: {
+                500: '#1a1a2e', // Azul escuro da marca
+                100: '#f0f0f0', // Cinza claro da marca
+              }
+            },
+            animation: {
+                'slide-down': 'slideDown 0.3s ease-out forwards',
+            },
+            keyframes: {
+                slideDown: {
+                    '0%': { transform: 'translateY(-100%)', opacity: '0' },
+                    '100%': { transform: 'translateY(0)', opacity: '1' },
+                }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Scrollbar personalizada sutil */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+      /* Prevenir highlight azul no mobile */
+      * {
+          -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.87.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-50 text-slate-900 antialiased overscroll-none">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+  
+  <!-- Registrar Service Worker para PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registrado:', registration.scope);
+          })
+          .catch((error) => {
+            console.log('SW falhou:', error);
+          });
+      });
+    }
+  </script>
+</body>
+</html>

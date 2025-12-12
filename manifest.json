@@ -1,0 +1,36 @@
+{
+  "name": "Su Rede Social - SU Controle",
+  "short_name": "Su Rede",
+  "description": "Crie conteúdo para redes sociais com IA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff6e40",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "pt-BR",
+  "categories": ["productivity", "social"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Criar Post",
+      "short_name": "Criar",
+      "url": "/?tab=create",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Calendário",
+      "short_name": "Agenda",
+      "url": "/?tab=calendar",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    }
+  ]
+}
