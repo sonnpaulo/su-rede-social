@@ -17,11 +17,11 @@ const MODELS = {
 // Helper para retry com delay
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Wrapper com retry automático para rate limits
+// Wrapper com retry rápido - vai pro fallback logo se Gemini der rate limit
 const withRetry = async <T>(
   fn: () => Promise<T>,
-  maxRetries: number = 2,
-  initialDelay: number = 5000
+  maxRetries: number = 1,
+  initialDelay: number = 2000
 ): Promise<T> => {
   let lastError: any;
   
@@ -31,20 +31,16 @@ const withRetry = async <T>(
     } catch (error: any) {
       lastError = error;
       
-      // Se for rate limit (429), espera e tenta novamente
+      // Se for rate limit (429), espera pouco e vai pro fallback
       if (error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-        // Extrai tempo de retry da mensagem se disponível
-        const retryMatch = error.message.match(/retry in (\d+\.?\d*)/i);
-        const waitTime = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) : initialDelay * (attempt + 1);
-        
         if (attempt < maxRetries) {
-          console.log(`Rate limit atingido. Aguardando ${waitTime/1000}s antes de tentar novamente...`);
-          await sleep(waitTime);
+          console.log(`Rate limit Gemini. Aguardando ${initialDelay/1000}s...`);
+          await sleep(initialDelay);
           continue;
         }
+        console.log('Gemini em rate limit, usando fallback (Groq/Mistral)...');
       }
       
-      // Se não for rate limit ou já esgotou retries, lança o erro
       throw error;
     }
   }

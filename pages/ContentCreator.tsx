@@ -85,8 +85,8 @@ const CarouselPreview: React.FC<CarouselPreviewProps> = ({ slides, brand, carous
                 {currentSlide + 1} / {slides.length}
             </div>
 
-            {/* Renderiza todos os slides ocultos para o download */}
-            <div className="hidden">
+            {/* Renderiza todos os slides para o download (fora da tela mas visíveis para html2canvas) */}
+            <div className="absolute -left-[9999px] top-0" style={{ width: '400px' }}>
                 {slides.map((slide, idx) => (
                     <CarouselSlideRenderer 
                         key={idx}
@@ -309,8 +309,18 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
   };
 
   const handleDownloadCarousel = async () => {
-      if (!carouselRefs.current.length) {
-          showToast('Nenhum slide para baixar', 'error');
+      // Verifica se há dados do carrossel
+      if (!generatedCarouselData || generatedCarouselData.length === 0) {
+          showToast('Nenhum carrossel gerado. Gere o conteúdo primeiro.', 'error');
+          return;
+      }
+      
+      // Filtra refs válidos
+      const validRefs = carouselRefs.current.filter(el => el !== null);
+      console.log('Refs válidos:', validRefs.length, 'de', carouselRefs.current.length);
+      
+      if (validRefs.length === 0) {
+          showToast('Slides não renderizados. Aguarde e tente novamente.', 'error');
           return;
       }
       
@@ -319,30 +329,39 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
           return;
       }
 
-      showToast('Preparando 5 slides em HD...', 'info');
+      showToast(`Preparando ${validRefs.length} slides em HD...`, 'info');
       
       let downloadedCount = 0;
       
       try {
           for (let i = 0; i < carouselRefs.current.length; i++) {
               const el = carouselRefs.current[i];
-              if (!el) continue;
+              if (!el) {
+                  console.warn(`Slide ${i + 1}: ref é null`);
+                  continue;
+              }
               
               try {
                   // Aguarda um pouco para garantir que o elemento está renderizado
-                  await new Promise(r => setTimeout(r, 200));
+                  await new Promise(r => setTimeout(r, 300));
                   
                   const currentWidth = el.offsetWidth || 400;
                   const scale = 1080 / currentWidth;
+                  
+                  console.log(`Slide ${i + 1}: width=${currentWidth}, scale=${scale}`);
 
                   const canvas = await html2canvas(el, { 
                       scale: scale, 
                       useCORS: true, 
                       backgroundColor: '#f0f0f0',
-                      logging: false,
+                      logging: true, // Ativar logs para debug
                       allowTaint: true,
-                      foreignObjectRendering: false
+                      foreignObjectRendering: false,
+                      windowWidth: 500,
+                      windowHeight: 500
                   });
+                  
+                  console.log(`Slide ${i + 1}: canvas ${canvas.width}x${canvas.height}`);
                   
                   // Verifica se o canvas tem conteúdo
                   if (canvas.width > 0 && canvas.height > 0) {
@@ -353,25 +372,26 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
                       link.click();
                       document.body.removeChild(link);
                       downloadedCount++;
+                      console.log(`Slide ${i + 1}: download OK`);
                   }
                   
                   // Pausa entre downloads
-                  await new Promise(r => setTimeout(r, 600));
+                  await new Promise(r => setTimeout(r, 500));
                   
               } catch (slideError) {
-                  console.warn(`Slide ${i + 1} falhou:`, slideError);
+                  console.error(`Slide ${i + 1} falhou:`, slideError);
               }
           }
           
           if (downloadedCount > 0) {
               showToast(`${downloadedCount} slides baixados com sucesso!`, 'success');
           } else {
-              showToast('Não foi possível baixar os slides. Tente recarregar a página.', 'error');
+              showToast('Não foi possível baixar os slides. Verifique o console (F12).', 'error');
           }
           
       } catch (e) {
-          console.error('Erro ao baixar:', e);
-          showToast('Erro ao baixar slides. Tente novamente.', 'error');
+          console.error('Erro geral ao baixar:', e);
+          showToast('Erro ao baixar slides. Verifique o console (F12).', 'error');
       }
   };
 

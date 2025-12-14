@@ -165,16 +165,17 @@ export const CarouselSlideRenderer: React.FC<CarouselRendererProps> = ({ slide, 
         <div ref={forwardedRef} className={`${containerStyle} justify-center items-center text-center`} style={{ backgroundColor: orange }}>
            <div className="bg-white/20 p-4 rounded-full mb-6"><Rocket size={48} className="text-white" /></div>
            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">{slide.title}</h1>
-           <p className="text-white/90 text-lg mb-8 max-w-xs mx-auto">{slide.body}</p>
-           <div className="text-white px-8 py-3 rounded-full font-bold shadow-lg" style={{ backgroundColor: darkBlue }}>ASSINE AGORA</div>
-           <div className="absolute bottom-6 text-white/50 text-xs font-bold">{slide.pageNumber} / {slide.totalPages}</div>
+           <p className="text-white/90 text-lg mb-6 max-w-xs mx-auto">{slide.body}</p>
+           <p className="text-white text-xl font-bold mb-2">ASSINE AGORA</p>
+           <p className="text-white/70 text-sm">👆 Link na bio</p>
+           <div className="absolute bottom-6 left-0 right-0 text-center text-white/50 text-xs font-bold">{slide.pageNumber} / {slide.totalPages}</div>
         </div>
       );
     }
     return (
       <div ref={forwardedRef} className={`${containerStyle} bg-white justify-between border border-gray-200`}>
-          <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: darkBlue }}>{slide.pageNumber}</div>
+          <div className="flex items-center space-x-3">
+              <span className="text-2xl font-bold" style={{ color: orange }}>{slide.pageNumber}.</span>
               <span className="font-bold text-sm uppercase" style={{ color: darkBlue }}>{slide.title}</span>
           </div>
           <div className="flex-1 flex flex-col justify-center">
@@ -215,16 +216,17 @@ export const CarouselSlideRenderer: React.FC<CarouselRendererProps> = ({ slide, 
         <div ref={forwardedRef} className={`${containerStyle} justify-center items-center text-center`} style={{ backgroundColor: orange }}>
            <div className="bg-white/20 p-4 rounded-full mb-6"><Rocket size={48} className="text-white" /></div>
            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">{slide.title}</h1>
-           <p className="text-white/90 text-lg mb-8 max-w-xs mx-auto">{slide.body}</p>
-           <div className="text-white px-8 py-3 rounded-full font-bold shadow-lg" style={{ backgroundColor: darkBlue }}>ASSINE AGORA</div>
-           <div className="absolute bottom-6 text-white/50 text-xs font-bold">{slide.pageNumber} / {slide.totalPages}</div>
+           <p className="text-white/90 text-lg mb-6 max-w-xs mx-auto">{slide.body}</p>
+           <p className="text-white text-xl font-bold mb-2">ASSINE AGORA</p>
+           <p className="text-white/70 text-sm">👆 Link na bio</p>
+           <div className="absolute bottom-6 left-0 right-0 text-center text-white/50 text-xs font-bold">{slide.pageNumber} / {slide.totalPages}</div>
         </div>
       );
     }
     return (
       <div ref={forwardedRef} className={`${containerStyle} justify-between`} style={{ backgroundColor: darkBlue }}>
-          <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: orange, color: 'white' }}>{slide.pageNumber}</div>
+          <div className="flex items-center space-x-3">
+              <span className="text-2xl font-bold" style={{ color: orange }}>{slide.pageNumber}.</span>
               <span className="font-bold text-sm uppercase" style={{ color: orange }}>{slide.title}</span>
           </div>
           <div className="flex-1 flex flex-col justify-center">
@@ -265,16 +267,17 @@ export const CarouselSlideRenderer: React.FC<CarouselRendererProps> = ({ slide, 
         <div ref={forwardedRef} className={`${containerStyle} justify-center items-center text-center`} style={{ backgroundColor: darkBlue }}>
            <div className="p-4 rounded-full mb-6" style={{ backgroundColor: orange }}><Rocket size={48} className="text-white" /></div>
            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">{slide.title}</h1>
-           <p className="text-white/80 text-lg mb-8 max-w-xs mx-auto">{slide.body}</p>
-           <div className="text-white px-8 py-3 rounded-full font-bold shadow-lg" style={{ backgroundColor: orange }}>ASSINE AGORA</div>
-           <div className="absolute bottom-6 text-white/50 text-xs font-bold">{slide.pageNumber} / {slide.totalPages}</div>
+           <p className="text-white/80 text-lg mb-6 max-w-xs mx-auto">{slide.body}</p>
+           <p className="text-xl font-bold mb-2" style={{ color: orange }}>ASSINE AGORA</p>
+           <p className="text-white/70 text-sm">👆 Link na bio</p>
+           <div className="absolute bottom-6 left-0 right-0 text-center text-white/50 text-xs font-bold">{slide.pageNumber} / {slide.totalPages}</div>
         </div>
       );
     }
     return (
       <div ref={forwardedRef} className={`${containerStyle} justify-between text-white`} style={{ backgroundColor: orange }}>
-          <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-[10px] font-bold" style={{ color: orange }}>{slide.pageNumber}</div>
+          <div className="flex items-center space-x-3">
+              <span className="text-2xl font-bold text-white">{slide.pageNumber}.</span>
               <span className="font-bold text-sm uppercase text-white">{slide.title}</span>
           </div>
           <div className="flex-1 flex flex-col justify-center">
