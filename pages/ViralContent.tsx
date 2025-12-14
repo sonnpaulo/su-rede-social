@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Download, Copy, RefreshCcw, User, Quote, Lightbulb, Rocket, Heart, DollarSign, Target, Zap, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, Download, Copy, RefreshCcw, User, Quote, Lightbulb, Rocket, Heart, DollarSign, Target, Zap, Upload, ChevronLeft, ChevronRight, Wand2, Loader2 } from 'lucide-react';
 import { getBrandProfile } from '../services/supabaseClient';
 import { showToast } from '../services/toastService';
+import { generateCarouselData } from '../services/geminiService';
 import { BrandIdentity, BRAND_COLORS } from '../types';
 
 // Declaração global para html2canvas
@@ -79,6 +80,8 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
   const [carouselTitle, setCarouselTitle] = useState('');
   const [carouselSlides, setCarouselSlides] = useState<string[]>(['', '', '']);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [aiTopic, setAiTopic] = useState('');
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   
   const templateRef = useRef<HTMLDivElement>(null);
   const carouselRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -178,6 +181,38 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
     const newSlides = [...carouselSlides];
     newSlides[index] = value;
     setCarouselSlides(newSlides);
+  };
+
+  // Gerar carrossel com IA
+  const handleGenerateWithAI = async () => {
+    if (!aiTopic.trim()) {
+      showToast('Digite um tema para a IA criar o carrossel', 'error');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      showToast('🤖 Gerando carrossel com IA...', 'info');
+      const slides = await generateCarouselData(aiTopic, brandProfile || undefined);
+      
+      // Preencher os campos com o resultado da IA
+      if (slides.length >= 5) {
+        setCarouselTitle(slides[0].title); // Capa
+        setCarouselSlides([
+          slides[1].body, // Dica 1
+          slides[2].body, // Dica 2
+          slides[3].body, // Dica 3
+        ]);
+      }
+      
+      showToast('✨ Carrossel criado! Revise e ajuste se precisar.', 'success');
+      setAiTopic(''); // Limpa o campo
+    } catch (error: any) {
+      console.error('Erro ao gerar com IA:', error);
+      showToast(error.message || 'Erro ao gerar com IA. Tente novamente.', 'error');
+    } finally {
+      setIsGeneratingAI(false);
+    }
   };
 
   const handleDownloadCarousel = async () => {
@@ -333,6 +368,53 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Criar com IA */}
+              <div className="bg-gradient-to-r from-purple-50 to-primary-50 p-3 rounded-xl border border-purple-200">
+                <label className="block text-sm font-medium text-purple-700 mb-2 flex items-center gap-1">
+                  <Wand2 size={14} />
+                  Criar com IA
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    placeholder="Ex: como economizar no mercado"
+                    className="flex-1 px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm bg-white"
+                    disabled={isGeneratingAI}
+                  />
+                  <button
+                    onClick={handleGenerateWithAI}
+                    disabled={isGeneratingAI || !aiTopic.trim()}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-primary-600 hover:from-purple-700 hover:to-primary-700 text-white font-medium rounded-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {isGeneratingAI ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span className="hidden sm:inline">Criando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        <span className="hidden sm:inline">Criar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-purple-600 mt-1">
+                  Digite um tema e a IA preenche tudo pra você
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-2 bg-white text-gray-400">ou preencha manualmente</span>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Título do Carrossel (Capa)</label>
                 <input
@@ -561,13 +643,7 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                       className="text-xl font-normal"
                       style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}
                     >
-                      Controle
-                    </span>
-                    <span 
-                      className="text-[8px] align-super ml-0.5"
-                      style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}
-                    >
-                      ®
+                      Controle<sup className="text-[8px]">®</sup>
                     </span>
                   </div>
                   <span 
@@ -690,8 +766,7 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                       <div className="flex flex-col items-center gap-1">
                         <div className="flex items-baseline">
                           <span className="text-xl font-bold" style={{ color: BRAND_COLORS.orange }}>SU</span>
-                          <span className="text-xl font-normal" style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}>Controle</span>
-                          <span className="text-[8px] align-super ml-0.5" style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}>®</span>
+                          <span className="text-xl font-normal" style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}>Controle<sup className="text-[8px]">®</sup></span>
                         </div>
                       </div>
                     </>
