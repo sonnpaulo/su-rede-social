@@ -711,7 +711,7 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                     <>
                       <div className="flex items-center gap-2 mb-4">
                         <span 
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-base font-bold leading-none"
                           style={{ backgroundColor: style.text, color: style.id === 'light' ? '#fff' : BRAND_COLORS.darkBlue }}
                         >
                           {currentSlide}
