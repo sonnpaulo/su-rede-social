@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wand2, Image as ImageIcon, Video, Type, Save, Share2, Loader2, Copy, Download, LayoutTemplate, Layers, ChevronRight, ChevronLeft, Upload, Camera, Film, RefreshCcw, Eye, Mic, Star } from 'lucide-react';
+import { Wand2, Image as ImageIcon, Video, Type, Save, Share2, Loader2, Copy, Download, LayoutTemplate, Layers, ChevronRight, ChevronLeft, Upload, Camera, RefreshCcw, Eye, Mic, Star } from 'lucide-react';
 import { generateSocialText, generateSocialImage, generateSocialVideo, fetchVideoBlob, generateTemplateData, generateCarouselData, analyzeImageAndGenerateCaption } from '../services/geminiService';
 import { generateSpeech } from '../services/elevenLabsService';
 import { getBrandProfile, getRecentPosts, savePost } from '../services/supabaseClient';
@@ -128,8 +128,6 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
   const [brandProfile, setBrandProfile] = useState<BrandIdentity | null>(null);
 
   const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
-  const [videoProgress, setVideoProgress] = useState(0);
   
   const [generatedText, setGeneratedText] = useState<TextGenerationResponse | null>(null);
   const [generatedMedia, setGeneratedMedia] = useState<string | null>(null);
@@ -337,77 +335,6 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
           console.error(e);
           showToast("Erro ao baixar slides.", 'error');
       }
-  };
-
-  const handleDownloadMotionVideo = async () => {
-    if (!carouselRefs.current.length) {
-      showToast('Nenhum slide para baixar', 'error');
-      return;
-    }
-    
-    setIsGeneratingVideo(true);
-    setVideoProgress(0);
-
-    try {
-        showToast('Baixando slides para vídeo...', 'info');
-        
-        const totalSlides = carouselRefs.current.filter(el => el !== null).length;
-        let downloadedCount = 0;
-
-        // Baixar cada slide como imagem
-        for (let i = 0; i < carouselRefs.current.length; i++) {
-            const el = carouselRefs.current[i];
-            if (!el) continue;
-            
-            setVideoProgress(Math.round((i / totalSlides) * 90));
-            
-            try {
-                // Usar html2canvas com configurações mais permissivas
-                const canvas = await html2canvas(el, { 
-                    scale: 2.5, // Alta qualidade
-                    useCORS: true, 
-                    backgroundColor: '#1a1a2e',
-                    logging: false,
-                    allowTaint: true,
-                    foreignObjectRendering: false,
-                    ignoreElements: (element) => {
-                        // Ignorar elementos que podem causar erro
-                        return element.tagName === 'LINK' || element.tagName === 'STYLE';
-                    }
-                });
-                
-                // Baixar imagem
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = `slide-${i + 1}-${Date.now()}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                downloadedCount++;
-                
-                // Pequena pausa entre downloads
-                await new Promise(r => setTimeout(r, 500));
-                
-            } catch (err) {
-                console.warn(`Slide ${i + 1} falhou:`, err);
-            }
-        }
-
-        setVideoProgress(100);
-        
-        if (downloadedCount > 0) {
-            showToast(`${downloadedCount} slides baixados! Monte o vídeo no CapCut ou InShot.`, 'success');
-        } else {
-            throw new Error('Nenhum slide foi baixado');
-        }
-
-    } catch (e: any) {
-        console.error('Erro ao baixar slides:', e);
-        showToast('Erro ao baixar. Use o botão "5 Imagens (HD)" como alternativa.', 'error');
-    } finally {
-        setIsGeneratingVideo(false);
-        setVideoProgress(0);
-    }
   };
 
   const handleDownloadMedia = () => {
@@ -857,35 +784,13 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
             <div className="w-full max-w-md grid grid-cols-2 gap-3 mt-auto">
               
               {contentType === ContentType.CAROUSEL_HD && (
-                  <>
                   <button 
                     onClick={handleDownloadCarousel}
-                    disabled={isGeneratingVideo}
-                    className="col-span-1 flex items-center justify-center py-3 bg-white border border-gray-200 text-gray-800 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                    className="col-span-2 flex items-center justify-center py-3 bg-[#1a1a2e] text-white font-bold rounded-xl hover:bg-black transition-colors shadow-lg"
                   >
                     <Download size={18} className="mr-2" />
-                    5 Imagens (HD)
+                    Baixar 5 Imagens (HD)
                   </button>
-
-                  <button 
-                    onClick={handleDownloadMotionVideo}
-                    disabled={isGeneratingVideo}
-                    className="col-span-1 flex items-center justify-center py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-colors shadow-lg relative overflow-hidden"
-                  >
-                    {isGeneratingVideo ? (
-                        <>
-                           <div className="absolute inset-0 bg-white transition-all duration-300" style={{ width: `${videoProgress}%`, opacity: 0.2 }}></div>
-                           <Loader2 className="animate-spin mr-2" size={18} />
-                           {Math.round(videoProgress)}%
-                        </>
-                    ) : (
-                        <>
-                           <Film size={18} className="mr-2" />
-                           📲 p/ Reels
-                        </>
-                    )}
-                  </button>
-                  </>
               )}
 
               {(contentType === ContentType.TEMPLATE_HD || (contentType === ContentType.UPLOAD_VISION && generatedTemplateData && showRemastered)) && (
