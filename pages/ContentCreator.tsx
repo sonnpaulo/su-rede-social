@@ -341,7 +341,7 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
 
   const handleDownloadMotionVideo = async () => {
     if (!carouselRefs.current.length) {
-      showToast('Nenhum slide para gerar vídeo', 'error');
+      showToast('Nenhum slide para baixar', 'error');
       return;
     }
     
@@ -349,130 +349,61 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
     setVideoProgress(0);
 
     try {
-        showToast('Preparando slides...', 'info');
+        showToast('Baixando slides para vídeo...', 'info');
         
-        // Fase 1: Capturar slides com html2canvas (0-40%)
-        const slideImages: string[] = [];
         const totalSlides = carouselRefs.current.filter(el => el !== null).length;
-        
-        if (typeof html2canvas === 'undefined') {
-          throw new Error('html2canvas não disponível');
-        }
+        let downloadedCount = 0;
 
+        // Baixar cada slide como imagem
         for (let i = 0; i < carouselRefs.current.length; i++) {
             const el = carouselRefs.current[i];
             if (!el) continue;
             
-            setVideoProgress(Math.round((i / totalSlides) * 40));
-            await new Promise(r => setTimeout(r, 100)); // Pausa para UI
+            setVideoProgress(Math.round((i / totalSlides) * 90));
             
             try {
+                // Usar html2canvas com configurações mais permissivas
                 const canvas = await html2canvas(el, { 
-                    scale: 2,
+                    scale: 2.5, // Alta qualidade
                     useCORS: true, 
                     backgroundColor: '#1a1a2e',
                     logging: false,
                     allowTaint: true,
                     foreignObjectRendering: false,
-                    removeContainer: true
+                    ignoreElements: (element) => {
+                        // Ignorar elementos que podem causar erro
+                        return element.tagName === 'LINK' || element.tagName === 'STYLE';
+                    }
                 });
-                slideImages.push(canvas.toDataURL('image/jpeg', 0.9));
+                
+                // Baixar imagem
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `slide-${i + 1}-${Date.now()}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                downloadedCount++;
+                
+                // Pequena pausa entre downloads
+                await new Promise(r => setTimeout(r, 500));
+                
             } catch (err) {
-                console.warn(`Slide ${i} falhou, pulando...`);
+                console.warn(`Slide ${i + 1} falhou:`, err);
             }
         }
 
-        if (slideImages.length === 0) {
-            throw new Error('Não foi possível capturar os slides');
-        }
-
-        setVideoProgress(40);
-        showToast(`${slideImages.length} slides prontos. Montando vídeo...`, 'info');
-
-        // Fase 2: Criar vídeo (40-100%)
-        const canvas = document.createElement('canvas');
-        canvas.width = 1080;
-        canvas.height = 1080;
-        const ctx = canvas.getContext('2d')!;
-
-        // Pré-carregar imagens
-        const images: HTMLImageElement[] = [];
-        for (const src of slideImages) {
-            const img = new Image();
-            img.src = src;
-            await new Promise(r => { img.onload = r; img.onerror = r; });
-            if (img.complete && img.naturalWidth > 0) {
-                images.push(img);
-            }
-        }
-
-        if (images.length === 0) {
-            throw new Error('Nenhuma imagem carregada');
-        }
-
-        // Configurar gravação
-        const stream = canvas.captureStream(30);
-        const recorder = new MediaRecorder(stream, { 
-            mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
-                ? 'video/webm;codecs=vp9' 
-                : 'video/webm'
-        });
-        
-        const chunks: Blob[] = [];
-        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-        
-        const videoReady = new Promise<Blob>(resolve => {
-            recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
-        });
-
-        recorder.start();
-
-        // Renderizar frames - mais rápido
-        const DURATION_PER_SLIDE = 2000; // 2 segundos por slide
-        const FRAME_INTERVAL = 50; // ~20 FPS
-        const FRAMES_PER_SLIDE = DURATION_PER_SLIDE / FRAME_INTERVAL;
-
-        for (let i = 0; i < images.length; i++) {
-            const img = images[i];
-            
-            for (let f = 0; f < FRAMES_PER_SLIDE; f++) {
-                // Fundo
-                ctx.fillStyle = '#1a1a2e';
-                ctx.fillRect(0, 0, 1080, 1080);
-                
-                // Zoom suave
-                const progress = f / FRAMES_PER_SLIDE;
-                const scale = 1 + (0.02 * progress);
-                const size = 1080 * scale;
-                const offset = (1080 - size) / 2;
-                
-                ctx.drawImage(img, offset, offset, size, size);
-                
-                await new Promise(r => setTimeout(r, FRAME_INTERVAL));
-            }
-            
-            setVideoProgress(40 + Math.round(((i + 1) / images.length) * 55));
-        }
-
-        setVideoProgress(95);
-        recorder.stop();
-        
-        const videoBlob = await videoReady;
-        
-        // Download
-        const url = URL.createObjectURL(videoBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `su-carrossel-${Date.now()}.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
         setVideoProgress(100);
-        showToast('Vídeo baixado! Converta para MP4 no CapCut se precisar.', 'success');
+        
+        if (downloadedCount > 0) {
+            showToast(`${downloadedCount} slides baixados! Monte o vídeo no CapCut ou InShot.`, 'success');
+        } else {
+            throw new Error('Nenhum slide foi baixado');
+        }
 
     } catch (e: any) {
-        console.error('Erro vídeo:', e);
-        showToast(e.message || 'Erro ao gerar vídeo', 'error');
+        console.error('Erro ao baixar slides:', e);
+        showToast('Erro ao baixar. Use o botão "5 Imagens (HD)" como alternativa.', 'error');
     } finally {
         setIsGeneratingVideo(false);
         setVideoProgress(0);
@@ -939,18 +870,18 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
                   <button 
                     onClick={handleDownloadMotionVideo}
                     disabled={isGeneratingVideo}
-                    className="col-span-1 flex items-center justify-center py-3 bg-[#1a1a2e] text-white font-bold rounded-xl hover:bg-black transition-colors shadow-lg relative overflow-hidden"
+                    className="col-span-1 flex items-center justify-center py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-colors shadow-lg relative overflow-hidden"
                   >
                     {isGeneratingVideo ? (
                         <>
-                           <div className="absolute inset-0 bg-primary-600 transition-all duration-300" style={{ width: `${videoProgress}%`, opacity: 0.3 }}></div>
+                           <div className="absolute inset-0 bg-white transition-all duration-300" style={{ width: `${videoProgress}%`, opacity: 0.2 }}></div>
                            <Loader2 className="animate-spin mr-2" size={18} />
                            {Math.round(videoProgress)}%
                         </>
                     ) : (
                         <>
                            <Film size={18} className="mr-2" />
-                           Baixar Vídeo
+                           📲 p/ Reels
                         </>
                     )}
                   </button>
