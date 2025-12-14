@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, PenTool, Calendar, Coins, Settings, Share2, Clock, Lightbulb } from 'lucide-react';
+import { LayoutDashboard, PenTool, Calendar, Coins, Settings, Share2, Clock, Lightbulb, Sparkles } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,6 +10,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   const menuItems = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard },
     { id: 'create', label: 'Criar Conteúdo', icon: PenTool },
+    { id: 'viral', label: 'Conteúdo Viral', icon: Sparkles, highlight: true },
     { id: 'calendar', label: 'Calendário', icon: Calendar },
     { id: 'ideas', label: 'Banco de Ideias', icon: Lightbulb },
     { id: 'history', label: 'Histórico', icon: Clock },

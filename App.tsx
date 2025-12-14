@@ -9,9 +9,10 @@ import { Settings } from './pages/Settings';
 import { ApiUsage } from './pages/ApiUsage';
 import { PostHistory } from './pages/PostHistory';
 import { IdeasBank } from './pages/IdeasBank';
+import { ViralContent } from './pages/ViralContent';
 import { getBrandProfile } from './services/supabaseClient';
 import { ToastContainer } from './components/UI/Toast.tsx';
-import { Bell, Search, User, LayoutDashboard, PenTool, Calendar, BarChart3, Settings as SettingsIcon, Share2, Coins, Clock, Lightbulb } from 'lucide-react';
+import { Bell, Search, User, LayoutDashboard, PenTool, Calendar, BarChart3, Settings as SettingsIcon, Share2, Coins, Clock, Lightbulb, Sparkles, Home } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('create');
@@ -54,6 +55,8 @@ const App: React.FC = () => {
         return <Dashboard />;
       case 'create':
         return <ContentCreator initialTopic={selectedTopic} />;
+      case 'viral':
+        return <ViralContent />;
       case 'calendar':
         return <CalendarView />;
       case 'history':
@@ -71,11 +74,12 @@ const App: React.FC = () => {
     }
   };
 
+  // Menu mobile com Dashboard incluído
   const navItems = [
+    { id: 'dashboard', label: 'Início', icon: Home },
     { id: 'create', label: 'Criar', icon: PenTool },
+    { id: 'viral', label: 'Viral', icon: Sparkles },
     { id: 'calendar', label: 'Agenda', icon: Calendar },
-    { id: 'ideas', label: 'Ideias', icon: Lightbulb },
-    { id: 'history', label: 'Histórico', icon: Clock },
   ];
 
   // Mostra Loading enquanto verifica
