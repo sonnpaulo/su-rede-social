@@ -340,26 +340,50 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
   };
 
   const handleDownloadMotionVideo = async () => {
-    if (!carouselRefs.current.length || typeof html2canvas === 'undefined') return;
+    if (!carouselRefs.current.length || typeof html2canvas === 'undefined') {
+      showToast('Erro: html2canvas não carregado', 'error');
+      return;
+    }
     
     setIsGeneratingVideo(true);
     setVideoProgress(0);
 
     try {
+        showToast('Capturando slides...', 'info');
         const slideImages: string[] = [];
         const totalSlides = carouselRefs.current.length;
         
+        // Fase 1: Capturar slides (0-30%)
         for (let i = 0; i < totalSlides; i++) {
             const el = carouselRefs.current[i];
             if (el) {
-                const currentWidth = el.offsetWidth;
-                const scale = 1080 / currentWidth;
-                
-                const canvas = await html2canvas(el, { scale: scale, useCORS: true, backgroundColor: null });
-                slideImages.push(canvas.toDataURL('image/png'));
+                try {
+                    const currentWidth = el.offsetWidth || 400;
+                    const scale = 1080 / currentWidth;
+                    
+                    const canvas = await html2canvas(el, { 
+                        scale: scale, 
+                        useCORS: true, 
+                        backgroundColor: null,
+                        logging: false,
+                        allowTaint: true
+                    });
+                    slideImages.push(canvas.toDataURL('image/png'));
+                } catch (slideError) {
+                    console.error(`Erro no slide ${i}:`, slideError);
+                    // Continua mesmo se um slide falhar
+                }
             }
-            setVideoProgress(10 + (i / totalSlides) * 20); 
+            setVideoProgress(Math.round((i + 1) / totalSlides * 30));
+            // Pequena pausa para UI atualizar
+            await new Promise(r => setTimeout(r, 50));
         }
+
+        if (slideImages.length === 0) {
+            throw new Error('Nenhum slide capturado');
+        }
+
+        showToast(`${slideImages.length} slides capturados. Gerando vídeo...`, 'info');
 
         const canvas = document.createElement('canvas');
         canvas.width = 1080;
@@ -380,53 +404,71 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
         };
 
         mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/mp4' }); 
+            const blob = new Blob(chunks, { type: 'video/webm' }); 
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `su-controle-video-${Date.now()}.mp4`;
+            a.download = `su-controle-carrossel-${Date.now()}.webm`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             setIsGeneratingVideo(false);
             setVideoProgress(0);
-            showToast('Vídeo baixado com sucesso!', 'success');
+            showToast('Vídeo baixado! Use CapCut para converter em MP4 se precisar.', 'success');
         };
 
         mediaRecorder.start();
 
-        const FPS = 30;
-        const SECONDS_PER_SLIDE = 3;
-        const FRAMES_PER_SLIDE = FPS * SECONDS_PER_SLIDE;
+        // Fase 2: Renderizar frames (30-95%)
+        const FPS = 24; // Reduzido para melhor performance
+        const SECONDS_PER_SLIDE = 2.5; // Reduzido para vídeo mais curto
+        const FRAMES_PER_SLIDE = Math.floor(FPS * SECONDS_PER_SLIDE);
 
-        for (let i = 0; i < slideImages.length; i++) {
+        // Pré-carregar todas as imagens
+        const loadedImages: HTMLImageElement[] = [];
+        for (const src of slideImages) {
             const img = new Image();
-            img.src = slideImages[i];
+            img.src = src;
             await new Promise((r) => (img.onload = r));
+            loadedImages.push(img);
+        }
+
+        for (let i = 0; i < loadedImages.length; i++) {
+            const img = loadedImages[i];
 
             for (let f = 0; f < FRAMES_PER_SLIDE; f++) {
-                ctx.fillStyle = '#000';
+                // Fundo
+                ctx.fillStyle = '#1a1a2e';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                const scale = 1 + (0.05 * (f / FRAMES_PER_SLIDE));
+                // Efeito zoom suave
+                const zoomProgress = f / FRAMES_PER_SLIDE;
+                const scale = 1 + (0.03 * zoomProgress); // Zoom mais sutil
                 const width = canvas.width * scale;
                 const height = canvas.height * scale;
                 const x = (canvas.width - width) / 2;
                 const y = (canvas.height - height) / 2;
 
                 ctx.drawImage(img, x, y, width, height);
-                await new Promise(r => setTimeout(r, 1000 / FPS));
+                
+                // Usar requestAnimationFrame para não bloquear UI
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 1000 / FPS)));
             }
-            setVideoProgress(30 + ((i + 1) / slideImages.length) * 60);
+            
+            const progress = 30 + Math.round(((i + 1) / loadedImages.length) * 65);
+            setVideoProgress(progress);
         }
 
-        await new Promise(r => setTimeout(r, 500));
+        setVideoProgress(95);
+        await new Promise(r => setTimeout(r, 300));
         mediaRecorder.stop();
+        setVideoProgress(100);
 
-    } catch (e) {
-        console.error(e);
-        showToast("Erro ao gerar vídeo. Tente novamente.", 'error');
+    } catch (e: any) {
+        console.error('Erro ao gerar vídeo:', e);
+        showToast(e.message || "Erro ao gerar vídeo. Tente novamente.", 'error');
         setIsGeneratingVideo(false);
+        setVideoProgress(0);
     }
   };
 
