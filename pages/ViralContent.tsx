@@ -59,9 +59,13 @@ const SAMPLE_PHRASES: Record<string, string[]> = {
   ],
 };
 
+// Tipos de conteúdo
+type ContentMode = 'single' | 'carousel';
+
 interface ViralContentProps {}
 
 export const ViralContent: React.FC<ViralContentProps> = () => {
+  const [contentMode, setContentMode] = useState<ContentMode>('single');
   const [category, setCategory] = useState('lembrete');
   const [visualStyle, setVisualStyle] = useState('light');
   const [phrase, setPhrase] = useState('');
@@ -71,7 +75,13 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
   const [showLogo, setShowLogo] = useState(true);
   const [brandProfile, setBrandProfile] = useState<BrandIdentity | null>(null);
   
+  // Carrossel - 5 slides
+  const [carouselTitle, setCarouselTitle] = useState('');
+  const [carouselSlides, setCarouselSlides] = useState<string[]>(['', '', '']);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
   const templateRef = useRef<HTMLDivElement>(null);
+  const carouselRefs = useRef<(HTMLDivElement | null)[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -83,6 +93,15 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
     
     // Carregar uma frase de exemplo inicial
     setPhrase(SAMPLE_PHRASES[category][0]);
+    
+    // Carregar dados salvos do localStorage
+    const savedPhoto = localStorage.getItem('viral_author_photo');
+    const savedName = localStorage.getItem('viral_author_name');
+    const savedHandle = localStorage.getItem('viral_author_handle');
+    
+    if (savedPhoto) setAuthorPhoto(savedPhoto);
+    if (savedName) setAuthorName(savedName);
+    if (savedHandle) setAuthorHandle(savedHandle);
   }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,10 +109,25 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAuthorPhoto(reader.result as string);
+        const photoData = reader.result as string;
+        setAuthorPhoto(photoData);
+        // Salvar no localStorage para persistir
+        localStorage.setItem('viral_author_photo', photoData);
+        showToast('Foto salva! Ela ficará disponível nas próximas vezes.', 'success');
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Salvar nome e handle quando mudar
+  const handleNameChange = (name: string) => {
+    setAuthorName(name);
+    localStorage.setItem('viral_author_name', name);
+  };
+
+  const handleHandleChange = (handle: string) => {
+    setAuthorHandle(handle);
+    localStorage.setItem('viral_author_handle', handle);
   };
 
   const getRandomPhrase = () => {
@@ -139,6 +173,52 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
     showToast('Frase copiada!', 'success');
   };
 
+  // Funções do carrossel
+  const updateSlide = (index: number, value: string) => {
+    const newSlides = [...carouselSlides];
+    newSlides[index] = value;
+    setCarouselSlides(newSlides);
+  };
+
+  const handleDownloadCarousel = async () => {
+    if (typeof html2canvas === 'undefined') {
+      showToast('Erro ao baixar. Tente novamente.', 'error');
+      return;
+    }
+
+    if (!confirm('Isso vai baixar 5 imagens (1 capa + 3 conteúdo + 1 CTA). Continuar?')) return;
+
+    try {
+      showToast('Gerando slides...', 'info');
+      
+      for (let i = 0; i < 5; i++) {
+        setCurrentSlide(i);
+        await new Promise(r => setTimeout(r, 300)); // Aguarda render
+        
+        const el = carouselRefs.current[i];
+        if (el) {
+          const currentWidth = el.offsetWidth;
+          const scale = 1080 / currentWidth;
+          const canvas = await html2canvas(el, { scale, useCORS: true, backgroundColor: null });
+          
+          const link = document.createElement('a');
+          link.href = canvas.toDataURL('image/png');
+          link.download = `carrossel-slide-${i + 1}-${Date.now()}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      
+      showToast('5 slides baixados com sucesso!', 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('Erro ao baixar slides.', 'error');
+    }
+  };
+
   const style = getCurrentStyle();
   const cat = getCurrentCategory();
 
@@ -157,6 +237,35 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
         {/* Painel de Configuração */}
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-5">
           
+          {/* Tipo de Conteúdo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Conteúdo</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setContentMode('single')}
+                className={`py-3 px-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${
+                  contentMode === 'single'
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <span className="text-lg">📷</span>
+                <span>Post Único</span>
+              </button>
+              <button
+                onClick={() => setContentMode('carousel')}
+                className={`py-3 px-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${
+                  contentMode === 'carousel'
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <span className="text-lg">🎠</span>
+                <span>Carrossel (5)</span>
+              </button>
+            </div>
+          </div>
+
           {/* Categoria */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
@@ -202,25 +311,58 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
             </div>
           </div>
 
-          {/* Frase */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">Sua Frase</label>
-              <button
-                onClick={getRandomPhrase}
-                className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1"
-              >
-                <RefreshCcw size={12} />
-                Sugestão
-              </button>
+          {/* Frase (Post Único) ou Carrossel */}
+          {contentMode === 'single' ? (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">Sua Frase</label>
+                <button
+                  onClick={getRandomPhrase}
+                  className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                >
+                  <RefreshCcw size={12} />
+                  Sugestão
+                </button>
+              </div>
+              <textarea
+                value={phrase}
+                onChange={(e) => setPhrase(e.target.value)}
+                placeholder="Digite sua frase de impacto..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none h-28 resize-none"
+              />
             </div>
-            <textarea
-              value={phrase}
-              onChange={(e) => setPhrase(e.target.value)}
-              placeholder="Digite sua frase de impacto..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none h-28 resize-none"
-            />
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Título do Carrossel (Capa)</label>
+                <input
+                  type="text"
+                  value={carouselTitle}
+                  onChange={(e) => setCarouselTitle(e.target.value)}
+                  placeholder="Ex: 3 dicas para economizar"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                />
+              </div>
+              
+              {carouselSlides.map((slide, idx) => (
+                <div key={idx}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Slide {idx + 2}: Dica {idx + 1}
+                  </label>
+                  <textarea
+                    value={slide}
+                    onChange={(e) => updateSlide(idx, e.target.value)}
+                    placeholder={`Digite a dica ${idx + 1}...`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm h-16 resize-none"
+                  />
+                </div>
+              ))}
+              
+              <p className="text-xs text-gray-400 italic">
+                Slide 5 (CTA) é gerado automaticamente com "Siga para mais" + "Link na bio"
+              </p>
+            </div>
+          )}
 
           {/* Autor */}
           <div className="grid grid-cols-2 gap-3">
@@ -229,7 +371,7 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
               <input
                 type="text"
                 value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
+                onChange={(e) => handleNameChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
               />
             </div>
@@ -238,7 +380,7 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
               <input
                 type="text"
                 value={authorHandle}
-                onChange={(e) => setAuthorHandle(e.target.value)}
+                onChange={(e) => handleHandleChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
               />
             </div>
@@ -287,28 +429,75 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
 
           {/* Botões de Ação */}
           <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleDownload}
-              disabled={!phrase}
-              className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download size={18} />
-              Baixar 1080x1080
-            </button>
-            <button
-              onClick={handleCopyText}
-              className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors"
-            >
-              <Copy size={18} />
-            </button>
+            {contentMode === 'single' ? (
+              <>
+                <button
+                  onClick={handleDownload}
+                  disabled={!phrase}
+                  className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download size={18} />
+                  Baixar 1080x1080
+                </button>
+                <button
+                  onClick={handleCopyText}
+                  className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors"
+                >
+                  <Copy size={18} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleDownloadCarousel}
+                disabled={!carouselTitle || carouselSlides.some(s => !s)}
+                className="flex-1 py-3 bg-gradient-to-r from-primary-600 to-orange-500 hover:from-primary-700 hover:to-orange-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download size={18} />
+                Baixar 5 Slides
+              </button>
+            )}
           </div>
         </div>
 
         {/* Preview do Template */}
         <div className="flex flex-col items-center">
-          <p className="text-sm text-gray-500 mb-3">Preview (1080x1080)</p>
+          <p className="text-sm text-gray-500 mb-3">
+            Preview (1080x1080) {contentMode === 'carousel' && `- Slide ${currentSlide + 1}/5`}
+          </p>
           
-          {/* Template Renderizado */}
+          {/* Navegação do Carrossel */}
+          {contentMode === 'carousel' && (
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
+                disabled={currentSlide === 0}
+                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <div className="flex gap-1">
+                {[0, 1, 2, 3, 4].map(i => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentSlide(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      i === currentSlide ? 'bg-primary-500 w-4' : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={() => setCurrentSlide(Math.min(4, currentSlide + 1))}
+                disabled={currentSlide === 4}
+                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+          
+          {/* Template Renderizado - Post Único */}
+          {contentMode === 'single' && (
           <div 
             ref={templateRef}
             className="w-full max-w-[400px] aspect-square rounded-2xl overflow-hidden shadow-2xl relative"
@@ -358,30 +547,159 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                 </p>
               </div>
 
-              {/* Logo no rodapé */}
+              {/* Logo no rodapé - Estilo oficial: SU laranja + Controle® preto */}
               {showLogo && (
-                <div className="mt-auto flex justify-center">
-                  <div className="flex items-center gap-1.5 opacity-80">
-                    <div 
-                      className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold"
-                      style={{ 
-                        backgroundColor: style.id === 'light' ? BRAND_COLORS.orange : 'white',
-                        color: style.id === 'light' ? 'white' : BRAND_COLORS.orange
-                      }}
+                <div className="mt-auto flex flex-col items-center gap-1">
+                  <div className="flex items-baseline">
+                    <span 
+                      className="text-xl font-bold"
+                      style={{ color: BRAND_COLORS.orange }}
                     >
                       SU
-                    </div>
+                    </span>
                     <span 
-                      className="text-sm font-semibold"
-                      style={{ color: style.text }}
+                      className="text-xl font-normal"
+                      style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}
                     >
                       Controle
                     </span>
+                    <span 
+                      className="text-[8px] align-super ml-0.5"
+                      style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}
+                    >
+                      ®
+                    </span>
                   </div>
+                  <span 
+                    className="text-[10px] tracking-wider"
+                    style={{ 
+                      color: style.id === 'light' || style.id === 'orange' ? '#666' : 'rgba(255,255,255,0.7)',
+                      fontStyle: 'italic'
+                    }}
+                  >
+                    Anote. Controle. Cresça.
+                  </span>
                 </div>
               )}
             </div>
           </div>
+          )}
+
+          {/* Template Renderizado - Carrossel */}
+          {contentMode === 'carousel' && (
+            <div className="w-full max-w-[400px]">
+              {/* Slide atual visível */}
+              <div 
+                ref={(el) => carouselRefs.current[currentSlide] = el}
+                className="w-full aspect-square rounded-2xl overflow-hidden shadow-2xl relative"
+                style={{ background: style.bg }}
+              >
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/20 rounded-full translate-y-1/2 -translate-x-1/2" />
+                </div>
+
+                <div className="relative h-full flex flex-col p-6">
+                  {/* SLIDE 0: CAPA */}
+                  {currentSlide === 0 && (
+                    <>
+                      <div className="flex-1 flex flex-col items-center justify-center text-center">
+                        <span className="text-4xl mb-4">{cat.emoji}</span>
+                        <h2 
+                          className="text-2xl font-bold leading-tight px-4"
+                          style={{ color: style.text }}
+                        >
+                          {carouselTitle || 'Título do Carrossel'}
+                        </h2>
+                        <div className="flex items-center gap-2 mt-6">
+                          <div className="w-10 h-10 rounded-full bg-white overflow-hidden border-2 border-white/50">
+                            {authorPhoto ? (
+                              <img src={authorPhoto} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                <User size={16} className="text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                          <span style={{ color: style.text }} className="text-sm font-medium">{authorHandle}</span>
+                        </div>
+                      </div>
+                      <div className="text-center" style={{ color: style.text, opacity: 0.7 }}>
+                        <span className="text-xs">Arraste para ver →</span>
+                      </div>
+                    </>
+                  )}
+
+                  {/* SLIDES 1-3: CONTEÚDO */}
+                  {currentSlide >= 1 && currentSlide <= 3 && (
+                    <>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold"
+                          style={{ backgroundColor: style.text, color: style.id === 'light' ? '#fff' : BRAND_COLORS.darkBlue }}
+                        >
+                          {currentSlide}
+                        </span>
+                        <span style={{ color: style.text }} className="text-sm font-medium">Dica {currentSlide}</span>
+                      </div>
+                      
+                      <div className="flex-1 flex items-center justify-center">
+                        <div className="bg-white rounded-2xl p-6 shadow-lg mx-2">
+                          <p className="text-gray-800 text-lg leading-relaxed font-medium text-center">
+                            {carouselSlides[currentSlide - 1] || `Dica ${currentSlide}...`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-center gap-1 mt-4">
+                        {[0, 1, 2, 3, 4].map(i => (
+                          <div 
+                            key={i} 
+                            className={`w-2 h-2 rounded-full ${i === currentSlide ? 'bg-white' : 'bg-white/40'}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* SLIDE 4: CTA */}
+                  {currentSlide === 4 && (
+                    <>
+                      <div className="flex-1 flex flex-col items-center justify-center text-center">
+                        <span className="text-5xl mb-4">🚀</span>
+                        <h2 
+                          className="text-2xl font-bold mb-2"
+                          style={{ color: style.text }}
+                        >
+                          Gostou?
+                        </h2>
+                        <p 
+                          className="text-lg mb-6"
+                          style={{ color: style.text, opacity: 0.9 }}
+                        >
+                          Salva e compartilha!
+                        </p>
+                        
+                        <div className="bg-white rounded-xl p-4 shadow-lg">
+                          <p className="text-gray-800 font-bold text-lg mb-1">Siga {authorHandle}</p>
+                          <p className="text-primary-600 font-medium">👆 Link na bio</p>
+                        </div>
+                      </div>
+
+                      {/* Logo */}
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-baseline">
+                          <span className="text-xl font-bold" style={{ color: BRAND_COLORS.orange }}>SU</span>
+                          <span className="text-xl font-normal" style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}>Controle</span>
+                          <span className="text-[8px] align-super ml-0.5" style={{ color: style.id === 'light' || style.id === 'orange' ? '#1a1a2e' : '#ffffff' }}>®</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Dicas */}
           <div className="mt-4 p-4 bg-primary-50 rounded-xl text-sm text-primary-800 max-w-[400px]">
