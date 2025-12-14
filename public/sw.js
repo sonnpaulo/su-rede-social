@@ -2,22 +2,9 @@
 const CACHE_NAME = 'su-rede-social-v1';
 const OFFLINE_URL = '/offline.html';
 
-// Arquivos para cachear
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg'
-];
-
-// Instalar SW e cachear arquivos estáticos
+// Instalar SW (sem pré-cache para evitar erros 404)
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Cache aberto');
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
+  console.log('SW instalado');
   self.skipWaiting();
 });
 
