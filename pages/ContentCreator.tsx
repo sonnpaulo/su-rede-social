@@ -309,31 +309,69 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
   };
 
   const handleDownloadCarousel = async () => {
-      if (!carouselRefs.current.length || typeof html2canvas === 'undefined') return;
+      if (!carouselRefs.current.length) {
+          showToast('Nenhum slide para baixar', 'error');
+          return;
+      }
+      
+      if (typeof html2canvas === 'undefined') {
+          showToast('Erro: biblioteca de captura não carregada', 'error');
+          return;
+      }
 
-      if (!confirm("Isso vai baixar 5 imagens para o seu dispositivo. Continuar?")) return;
-
+      showToast('Preparando 5 slides em HD...', 'info');
+      
+      let downloadedCount = 0;
+      
       try {
-          showToast('Iniciando download dos 5 slides...', 'info');
           for (let i = 0; i < carouselRefs.current.length; i++) {
               const el = carouselRefs.current[i];
-              if (el) {
-                  const currentWidth = el.offsetWidth;
+              if (!el) continue;
+              
+              try {
+                  // Aguarda um pouco para garantir que o elemento está renderizado
+                  await new Promise(r => setTimeout(r, 200));
+                  
+                  const currentWidth = el.offsetWidth || 400;
                   const scale = 1080 / currentWidth;
 
-                  const canvas = await html2canvas(el, { scale: scale, useCORS: true, backgroundColor: null });
-                  const link = document.createElement('a');
-                  link.href = canvas.toDataURL('image/png');
-                  link.download = `slide-${i + 1}-sucontrole.png`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  await new Promise(r => setTimeout(r, 500));
+                  const canvas = await html2canvas(el, { 
+                      scale: scale, 
+                      useCORS: true, 
+                      backgroundColor: '#f0f0f0',
+                      logging: false,
+                      allowTaint: true,
+                      foreignObjectRendering: false
+                  });
+                  
+                  // Verifica se o canvas tem conteúdo
+                  if (canvas.width > 0 && canvas.height > 0) {
+                      const link = document.createElement('a');
+                      link.href = canvas.toDataURL('image/png', 1.0);
+                      link.download = `slide-${i + 1}-sucontrole.png`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      downloadedCount++;
+                  }
+                  
+                  // Pausa entre downloads
+                  await new Promise(r => setTimeout(r, 600));
+                  
+              } catch (slideError) {
+                  console.warn(`Slide ${i + 1} falhou:`, slideError);
               }
           }
+          
+          if (downloadedCount > 0) {
+              showToast(`${downloadedCount} slides baixados com sucesso!`, 'success');
+          } else {
+              showToast('Não foi possível baixar os slides. Tente recarregar a página.', 'error');
+          }
+          
       } catch (e) {
-          console.error(e);
-          showToast("Erro ao baixar slides.", 'error');
+          console.error('Erro ao baixar:', e);
+          showToast('Erro ao baixar slides. Tente novamente.', 'error');
       }
   };
 
