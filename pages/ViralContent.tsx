@@ -258,10 +258,11 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
         }
       }
       
-      // Salvar no histórico - usar só o título da capa
+      // Salvar no histórico
+      const cat = getCurrentCategory();
       const allContent = `${carouselTitle}\n\n${carouselSlides.join('\n\n')}`;
       await savePostToHistory({
-        topic: carouselTitle || 'Carrossel Viral',
+        topic: `Carrossel: ${carouselTitle || cat.label}`,
         platform: 'Instagram',
         contentType: 'VIRAL_CAROUSEL',
         caption: allContent,
@@ -708,17 +709,18 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                         >
                           {carouselTitle || 'Título do Carrossel'}
                         </h2>
-                        <div className="flex items-center gap-2 mt-6">
-                          <div className="w-10 h-10 rounded-full bg-white overflow-hidden border-2 border-white/50">
+                        <div className="flex flex-col items-center gap-1 mt-6">
+                          <div className="w-12 h-12 rounded-full bg-white overflow-hidden border-2 border-white/50">
                             {authorPhoto ? (
                               <img src={authorPhoto} className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                                <User size={16} className="text-gray-400" />
+                                <User size={18} className="text-gray-400" />
                               </div>
                             )}
                           </div>
-                          <span style={{ color: style.text }} className="text-sm font-medium">{authorHandle}</span>
+                          <span style={{ color: style.text }} className="text-base font-bold mt-1">{authorName}</span>
+                          <span style={{ color: style.text, opacity: 0.7 }} className="text-sm">{authorHandle}</span>
                         </div>
                       </div>
                       <div className="text-center" style={{ color: style.text, opacity: 0.7 }}>
@@ -730,13 +732,14 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                   {/* SLIDES 1-3: CONTEÚDO */}
                   {currentSlide >= 1 && currentSlide <= 3 && (
                     <>
-                      <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-2 mb-4">
                         <span 
-                          className="text-5xl font-bold"
+                          className="text-3xl font-bold"
                           style={{ color: style.text }}
                         >
-                          {currentSlide}
+                          {currentSlide}.
                         </span>
+                        <span style={{ color: style.text }} className="text-lg font-medium">Dica {currentSlide}</span>
                       </div>
                       
                       <div className="flex-1 flex items-center justify-center">
