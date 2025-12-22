@@ -905,8 +905,9 @@ export const ContentCreator: React.FC<ContentCreatorProps> = ({ initialTopic }) 
 
               <button 
                 onClick={() => {
-                     navigator.clipboard.writeText(generatedText?.caption || '');
-                     showToast('Legenda copiada!', 'info');
+                     const fullCaption = `${generatedText?.caption || ''}\n\n${generatedText?.hashtags.map(h => `#${h}`).join(' ') || ''}`;
+                     navigator.clipboard.writeText(fullCaption);
+                     showToast('Legenda + hashtags copiadas!', 'success');
                 }}
                 className="flex items-center justify-center py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors"
               >
