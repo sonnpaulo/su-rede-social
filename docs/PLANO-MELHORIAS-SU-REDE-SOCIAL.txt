@@ -1,0 +1,74 @@
+# PLANO DE MELHORIAS - SU REDE SOCIAL
+# Data: 22/12/2024
+# Status: APROVADO
+
+================================================================================
+## PROBLEMA 1: NÚMEROS NO CARROSSEL COM BOLHA
+================================================================================
+
+SITUAÇÃO ATUAL:
+- No ViralContent.tsx, os números dos slides 1-3 estão dentro de círculos coloridos
+- Linha ~715: <span className="w-8 h-8 rounded-full...">
+
+SOLUÇÃO:
+- Remover o estilo de bolha (rounded-full, backgroundColor)
+- Deixar apenas o número com estilo simples
+
+ARQUIVO: su-rede-social/pages/ViralContent.tsx
+ESFORÇO: 5 minutos
+
+================================================================================
+## PROBLEMA 2: MENU MOBILE INCOMPLETO
+================================================================================
+
+SITUAÇÃO ATUAL:
+- Menu mobile (bottom bar) só tem 5 itens: Início, Criar, Viral, Agenda, Ajustes
+- Sidebar desktop tem 8 itens completos
+- Faltam: Histórico, Banco de Ideias, Uso da API
+
+SOLUÇÃO:
+- Criar menu lateral deslizante (drawer) para mobile
+- Estilo de app moderno com todas as opções
+- Botão hamburguer no header para abrir
+- Manter bottom bar simplificada com 4-5 itens principais
+
+ARQUIVOS:
+- su-rede-social/App.tsx (adicionar drawer)
+- su-rede-social/components/Layout/MobileDrawer.tsx (novo componente)
+
+ESFORÇO: 30 minutos
+
+================================================================================
+## PROBLEMA 3: CONTEÚDO VIRAL NÃO SALVA NO HISTÓRICO
+================================================================================
+
+SITUAÇÃO ATUAL:
+- ContentCreator.tsx salva posts no histórico via saveToHistory()
+- ViralContent.tsx NÃO salva - apenas baixa as imagens
+- Posts criados no "Conteúdo Viral" não aparecem no histórico
+
+SOLUÇÃO:
+- Adicionar chamada savePostToHistory() no handleDownload (post único)
+- Adicionar chamada savePostToHistory() no handleDownloadCarousel (carrossel)
+- Salvar com tipo "VIRAL_SINGLE" ou "VIRAL_CAROUSEL"
+
+ARQUIVO: su-rede-social/pages/ViralContent.tsx
+ESFORÇO: 15 minutos
+
+================================================================================
+## ORDEM DE EXECUÇÃO
+================================================================================
+
+1. [X] Corrigir números sem bolha no carrossel ✅
+2. [X] Salvar conteúdo viral no histórico ✅
+3. [X] Criar menu lateral mobile (drawer) ✅
+
+================================================================================
+## NOTAS TÉCNICAS
+================================================================================
+
+- Banco de dados: rmtippolgtucbwvjytng (Rede Social)
+- Tabela de histórico: post_history
+- Função de salvar: savePostToHistory() em supabaseClient.ts
+
+================================================================================

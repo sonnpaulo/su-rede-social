@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Layout/Sidebar';
+import { MobileDrawer } from './components/Layout/MobileDrawer';
 import { Dashboard } from './pages/Dashboard';
 import { ContentCreator } from './pages/ContentCreator';
 import { CalendarView } from './pages/CalendarView';
@@ -12,25 +13,22 @@ import { IdeasBank } from './pages/IdeasBank';
 import { ViralContent } from './pages/ViralContent';
 import { getBrandProfile } from './services/supabaseClient';
 import { ToastContainer } from './components/UI/Toast.tsx';
-import { Bell, Search, User, LayoutDashboard, PenTool, Calendar, BarChart3, Settings as SettingsIcon, Share2, Coins, Clock, Lightbulb, Sparkles, Home } from 'lucide-react';
+import { Bell, Search, User, Menu, Share2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('create');
-  const [hasBrand, setHasBrand] = useState<boolean | null>(null); // null = loading
-  
-  // Estado para passar tópico do Calendário para o Criador
+  const [hasBrand, setHasBrand] = useState<boolean | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<string>('');
 
   useEffect(() => {
     checkBrand();
 
-    // Listener para quando o usuário seleciona uma ideia no calendário
     const handleSelectTopic = (e: CustomEvent<string>) => {
         setSelectedTopic(e.detail);
         setActiveTab('create');
     };
 
-    // Listener para navegação entre páginas
     const handleNavigate = (e: CustomEvent<string>) => {
         setActiveTab(e.detail);
     };
@@ -74,33 +72,43 @@ const App: React.FC = () => {
     }
   };
 
-  // Menu mobile com Dashboard incluído
-  const navItems = [
-    { id: 'dashboard', label: 'Início', icon: Home },
-    { id: 'create', label: 'Criar', icon: PenTool },
-    { id: 'viral', label: 'Viral', icon: Sparkles },
-    { id: 'calendar', label: 'Agenda', icon: Calendar },
-  ];
-
-  // Mostra Loading enquanto verifica
+  // Loading
   if (hasBrand === null) {
-      return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
-  // Se não tiver marca, mostra onboarding obrigatório
+  // Onboarding
   if (hasBrand === false) {
-      return <BrandSetup onComplete={() => setHasBrand(true)} />;
+    return <BrandSetup onComplete={() => setHasBrand(true)} />;
   }
 
   // App Principal
   return (
-    <div className="min-h-screen bg-gray-50 flex font-sans pb-24 md:pb-0">
+    <div className="min-h-screen bg-gray-50 flex font-sans">
       <ToastContainer />
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <MobileDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
       
       <main className="flex-1 md:ml-64 transition-all duration-300 w-full">
         <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 md:px-8 py-3 md:py-4 flex justify-between items-center shadow-sm">
            <div className="flex items-center">
+              {/* Botão hamburguer mobile */}
+              <button 
+                onClick={() => setIsDrawerOpen(true)}
+                className="md:hidden p-2 -ml-2 mr-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu size={24} className="text-gray-700" />
+              </button>
+              
               <div className="md:hidden flex items-center space-x-2">
                  <div className="w-8 h-8 bg-gradient-to-tr from-primary-500 to-orange-400 rounded-lg flex items-center justify-center shadow-lg shadow-primary-500/30">
                     <Share2 className="text-white w-4 h-4" />
@@ -135,34 +143,6 @@ const App: React.FC = () => {
           {renderContent()}
         </div>
       </main>
-
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center py-3 px-2 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center space-y-1 w-16 ${
-                isActive ? 'text-primary-600' : 'text-gray-400'
-              }`}
-            >
-              <Icon size={24} className={isActive ? 'fill-current' : ''} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
-          );
-        })}
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex flex-col items-center justify-center space-y-1 w-16 ${
-            activeTab === 'settings' ? 'text-primary-600' : 'text-gray-400'
-          }`}
-        >
-          <SettingsIcon size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
-          <span className="text-[10px] font-medium">Ajustes</span>
-        </button>
-      </div>
     </div>
   );
 };

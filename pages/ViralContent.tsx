@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Download, Copy, RefreshCcw, User, Quote, Lightbulb, Rocket, Heart, DollarSign, Target, Zap, Upload, ChevronLeft, ChevronRight, Wand2, Loader2 } from 'lucide-react';
-import { getBrandProfile } from '../services/supabaseClient';
+import { getBrandProfile, savePostToHistory } from '../services/supabaseClient';
 import { showToast } from '../services/toastService';
 import { generateCarouselData } from '../services/geminiService';
 import { BrandIdentity, BRAND_COLORS } from '../types';
@@ -164,7 +164,18 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showToast('Download iniciado!', 'success');
+      
+      // Salvar no histórico
+      const cat = getCurrentCategory();
+      await savePostToHistory({
+        topic: `Viral: ${cat.label}`,
+        platform: 'Instagram',
+        contentType: 'VIRAL_SINGLE',
+        caption: phrase,
+        hashtags: [category, 'sucontrole', 'financas'],
+      });
+      
+      showToast('Download iniciado e salvo no histórico!', 'success');
     } catch (e) {
       console.error(e);
       showToast('Erro ao baixar. Tente novamente.', 'error');
@@ -247,7 +258,18 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
         }
       }
       
-      showToast('5 slides baixados com sucesso!', 'success');
+      // Salvar no histórico
+      const cat = getCurrentCategory();
+      const allContent = `${carouselTitle}\n\n${carouselSlides.join('\n\n')}`;
+      await savePostToHistory({
+        topic: `Carrossel: ${carouselTitle || cat.label}`,
+        platform: 'Instagram',
+        contentType: 'VIRAL_CAROUSEL',
+        caption: allContent,
+        hashtags: [category, 'sucontrole', 'carrossel', 'financas'],
+      });
+      
+      showToast('5 slides baixados e salvos no histórico!', 'success');
     } catch (e) {
       console.error(e);
       showToast('Erro ao baixar slides.', 'error');
@@ -711,12 +733,12 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                     <>
                       <div className="flex items-center gap-2 mb-4">
                         <span 
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-base font-bold leading-none"
-                          style={{ backgroundColor: style.text, color: style.id === 'light' ? '#fff' : BRAND_COLORS.darkBlue }}
+                          className="text-3xl font-bold"
+                          style={{ color: style.text }}
                         >
-                          {currentSlide}
+                          {currentSlide}.
                         </span>
-                        <span style={{ color: style.text }} className="text-sm font-medium">Dica {currentSlide}</span>
+                        <span style={{ color: style.text }} className="text-lg font-medium">Dica {currentSlide}</span>
                       </div>
                       
                       <div className="flex-1 flex items-center justify-center">
