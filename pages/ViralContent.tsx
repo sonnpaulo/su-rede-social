@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Download, Copy, RefreshCcw, User, Quote, Lightbulb, Rocket, Heart, DollarSign, Target, Zap, Upload, ChevronLeft, ChevronRight, Wand2, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Sparkles, Download, Copy, RefreshCcw, User, Quote, Lightbulb, Rocket, Heart, DollarSign, Target, Zap, Upload, ChevronLeft, ChevronRight, Wand2, Loader2, ZoomIn, ZoomOut, Move, X, Check } from 'lucide-react';
 import { getBrandProfile, savePostToHistory } from '../services/supabaseClient';
 import { showToast } from '../services/toastService';
-import { generateCarouselData } from '../services/geminiService';
+import { generateCarouselData, generateViralCaption } from '../services/geminiService';
 import { BrandIdentity, BRAND_COLORS } from '../types';
 
 // Declaração global para html2canvas
@@ -73,6 +73,14 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
   const [authorName, setAuthorName] = useState('David');
   const [authorHandle, setAuthorHandle] = useState('@sucontrole');
   const [authorPhoto, setAuthorPhoto] = useState<string | null>(null);
+  const [photoZoom, setPhotoZoom] = useState(1);
+  const [photoPosition, setPhotoPosition] = useState({ x: 0, y: 0 });
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const [tempPhoto, setTempPhoto] = useState<string | null>(null);
+  const [tempZoom, setTempZoom] = useState(1);
+  const [tempPosition, setTempPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showLogo, setShowLogo] = useState(true);
   const [brandProfile, setBrandProfile] = useState<BrandIdentity | null>(null);
   
@@ -82,6 +90,11 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [aiTopic, setAiTopic] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  
+  // Legenda
+  const [caption, setCaption] = useState('');
+  const [hashtags, setHashtags] = useState<string[]>([]);
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   
   const templateRef = useRef<HTMLDivElement>(null);
   const carouselRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -105,6 +118,12 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
     if (savedPhoto) setAuthorPhoto(savedPhoto);
     if (savedName) setAuthorName(savedName);
     if (savedHandle) setAuthorHandle(savedHandle);
+    
+    // Carregar zoom e posição salvos
+    const savedZoom = localStorage.getItem('viral_photo_zoom');
+    const savedPosition = localStorage.getItem('viral_photo_position');
+    if (savedZoom) setPhotoZoom(parseFloat(savedZoom));
+    if (savedPosition) setPhotoPosition(JSON.parse(savedPosition));
   }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,13 +132,103 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const photoData = reader.result as string;
-        setAuthorPhoto(photoData);
-        // Salvar no localStorage para persistir
-        localStorage.setItem('viral_author_photo', photoData);
-        showToast('Foto salva! Ela ficará disponível nas próximas vezes.', 'success');
+        // Abrir editor ao invés de salvar direto
+        setTempPhoto(photoData);
+        setTempZoom(1);
+        setTempPosition({ x: 0, y: 0 });
+        setShowPhotoEditor(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Funções do editor de foto
+  const handleEditorMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - tempPosition.x, y: e.clientY - tempPosition.y });
+  };
+
+  const handleEditorMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    const maxOffset = 50 * tempZoom;
+    const newX = Math.max(-maxOffset, Math.min(maxOffset, e.clientX - dragStart.x));
+    const newY = Math.max(-maxOffset, Math.min(maxOffset, e.clientY - dragStart.y));
+    setTempPosition({ x: newX, y: newY });
+  }, [isDragging, dragStart, tempZoom]);
+
+  const handleEditorMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (showPhotoEditor) {
+      window.addEventListener('mousemove', handleEditorMouseMove);
+      window.addEventListener('mouseup', handleEditorMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleEditorMouseMove);
+        window.removeEventListener('mouseup', handleEditorMouseUp);
+      };
+    }
+  }, [showPhotoEditor, handleEditorMouseMove, handleEditorMouseUp]);
+
+  const handleSavePhoto = () => {
+    if (tempPhoto) {
+      setAuthorPhoto(tempPhoto);
+      setPhotoZoom(tempZoom);
+      setPhotoPosition(tempPosition);
+      localStorage.setItem('viral_author_photo', tempPhoto);
+      localStorage.setItem('viral_photo_zoom', tempZoom.toString());
+      localStorage.setItem('viral_photo_position', JSON.stringify(tempPosition));
+      showToast('Foto ajustada e salva!', 'success');
+    }
+    setShowPhotoEditor(false);
+  };
+
+  const handleCancelPhotoEdit = () => {
+    setShowPhotoEditor(false);
+    setTempPhoto(null);
+  };
+
+  const handleEditExistingPhoto = () => {
+    if (authorPhoto) {
+      setTempPhoto(authorPhoto);
+      setTempZoom(photoZoom);
+      setTempPosition(photoPosition);
+      setShowPhotoEditor(true);
+    }
+  };
+
+  // Gerar legenda com IA
+  const handleGenerateCaption = async () => {
+    const content = contentMode === 'single' 
+      ? phrase 
+      : `${carouselTitle}\n${carouselSlides.join('\n')}`;
+    
+    if (!content.trim()) {
+      showToast('Preencha o conteúdo primeiro', 'error');
+      return;
+    }
+
+    setIsGeneratingCaption(true);
+    try {
+      showToast('🤖 Gerando legenda...', 'info');
+      const result = await generateViralCaption(content, contentMode, category, brandProfile || undefined);
+      setCaption(result.caption);
+      setHashtags(result.hashtags);
+      showToast('✨ Legenda criada!', 'success');
+    } catch (error: any) {
+      console.error('Erro ao gerar legenda:', error);
+      showToast(error.message || 'Erro ao gerar legenda', 'error');
+    } finally {
+      setIsGeneratingCaption(false);
+    }
+  };
+
+  const handleCopyCaption = () => {
+    const fullCaption = `${caption}\n\n${hashtags.map(h => `#${h}`).join(' ')}`;
+    navigator.clipboard.writeText(fullCaption);
+    showToast('Legenda copiada!', 'success');
   };
 
   // Salvar nome e handle quando mudar
@@ -280,6 +389,92 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto min-h-[calc(100vh-80px)]">
+      {/* Modal Editor de Foto */}
+      {showPhotoEditor && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Ajustar Foto</h3>
+              <button onClick={handleCancelPhotoEdit} className="p-1 hover:bg-gray-100 rounded-full">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Preview circular */}
+            <div className="flex justify-center mb-4">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-primary-200 bg-gray-100 relative">
+                {tempPhoto && (
+                  <img 
+                    src={tempPhoto} 
+                    className="absolute cursor-move select-none"
+                    style={{
+                      width: `${100 * tempZoom}%`,
+                      height: `${100 * tempZoom}%`,
+                      left: `${50 + tempPosition.x}%`,
+                      top: `${50 + tempPosition.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      objectFit: 'cover',
+                    }}
+                    onMouseDown={handleEditorMouseDown}
+                    draggable={false}
+                  />
+                )}
+              </div>
+            </div>
+            
+            <p className="text-xs text-gray-500 text-center mb-4 flex items-center justify-center gap-1">
+              <Move size={12} /> Arraste a foto para posicionar
+            </p>
+            
+            {/* Controle de Zoom */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Zoom</label>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setTempZoom(Math.max(1, tempZoom - 0.1))}
+                  className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                >
+                  <ZoomOut size={18} />
+                </button>
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.1"
+                  value={tempZoom}
+                  onChange={(e) => setTempZoom(parseFloat(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                />
+                <button 
+                  onClick={() => setTempZoom(Math.min(3, tempZoom + 0.1))}
+                  className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                >
+                  <ZoomIn size={18} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 text-center mt-1">{Math.round(tempZoom * 100)}%</p>
+            </div>
+            
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelPhotoEdit}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSavePhoto}
+                className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+              >
+                <Check size={18} />
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
@@ -494,11 +689,23 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Sua Foto</label>
             <div className="flex items-center gap-3">
               <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-16 h-16 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden"
+                onClick={() => authorPhoto ? handleEditExistingPhoto() : fileInputRef.current?.click()}
+                className="w-16 h-16 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden relative"
+                title={authorPhoto ? "Clique para ajustar" : "Clique para enviar"}
               >
                 {authorPhoto ? (
-                  <img src={authorPhoto} className="w-full h-full object-cover" />
+                  <img 
+                    src={authorPhoto} 
+                    className="absolute"
+                    style={{
+                      width: `${100 * photoZoom}%`,
+                      height: `${100 * photoZoom}%`,
+                      left: `${50 + photoPosition.x}%`,
+                      top: `${50 + photoPosition.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      objectFit: 'cover',
+                    }}
+                  />
                 ) : (
                   <Upload size={20} className="text-gray-400" />
                 )}
@@ -510,9 +717,32 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                 onChange={handlePhotoUpload}
                 className="hidden"
               />
-              <div className="text-xs text-gray-500">
-                <p>Clique para enviar sua foto</p>
-                <p className="text-gray-400">Recomendado: foto quadrada</p>
+              <div className="text-xs text-gray-500 flex-1">
+                {authorPhoto ? (
+                  <div className="space-y-1">
+                    <p className="text-primary-600 font-medium">Foto salva ✓</p>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={handleEditExistingPhoto}
+                        className="text-primary-600 hover:text-primary-700 underline"
+                      >
+                        Ajustar zoom
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-gray-500 hover:text-gray-700 underline"
+                      >
+                        Trocar foto
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p>Clique para enviar sua foto</p>
+                    <p className="text-gray-400">Recomendado: foto quadrada</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -557,6 +787,65 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
               >
                 <Download size={18} />
                 Baixar 5 Slides
+              </button>
+            )}
+          </div>
+
+          {/* Seção de Legenda */}
+          <div className="mt-5 pt-5 border-t border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-gray-700">Legenda para o Post</label>
+              <button
+                onClick={handleGenerateCaption}
+                disabled={isGeneratingCaption || (contentMode === 'single' ? !phrase : !carouselTitle)}
+                className="text-xs bg-gradient-to-r from-purple-500 to-primary-500 hover:from-purple-600 hover:to-primary-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGeneratingCaption ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 size={12} />
+                    Gerar com IA
+                  </>
+                )}
+              </button>
+            </div>
+            
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Clique em 'Gerar com IA' ou escreva sua legenda aqui..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none h-32 resize-none text-sm"
+            />
+            
+            {/* Hashtags */}
+            {hashtags.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs text-gray-500 mb-1">Hashtags sugeridas:</p>
+                <div className="flex flex-wrap gap-1">
+                  {hashtags.map((tag, idx) => (
+                    <span 
+                      key={idx}
+                      className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Botão copiar legenda */}
+            {caption && (
+              <button
+                onClick={handleCopyCaption}
+                className="mt-3 w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
+              >
+                <Copy size={16} />
+                Copiar Legenda + Hashtags
               </button>
             )}
           </div>
@@ -629,9 +918,20 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
               <div className="bg-white rounded-2xl p-5 shadow-lg mx-2 my-4">
                 {/* Header do card com foto e @ */}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 border-2 border-primary-100">
+                  <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 border-2 border-primary-100 relative">
                     {authorPhoto ? (
-                      <img src={authorPhoto} className="w-full h-full object-cover" />
+                      <img 
+                        src={authorPhoto} 
+                        className="absolute"
+                        style={{
+                          width: `${100 * photoZoom}%`,
+                          height: `${100 * photoZoom}%`,
+                          left: `${50 + photoPosition.x}%`,
+                          top: `${50 + photoPosition.y}%`,
+                          transform: 'translate(-50%, -50%)',
+                          objectFit: 'cover',
+                        }}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-primary-100">
                         <User size={20} className="text-primary-400" />
@@ -709,9 +1009,20 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                           {carouselTitle || 'Título do Carrossel'}
                         </h2>
                         <div className="flex flex-col items-center gap-1 mt-6">
-                          <div className="w-12 h-12 rounded-full bg-white overflow-hidden border-2 border-white/50">
+                          <div className="w-12 h-12 rounded-full bg-white overflow-hidden border-2 border-white/50 relative">
                             {authorPhoto ? (
-                              <img src={authorPhoto} className="w-full h-full object-cover" />
+                              <img 
+                                src={authorPhoto} 
+                                className="absolute"
+                                style={{
+                                  width: `${100 * photoZoom}%`,
+                                  height: `${100 * photoZoom}%`,
+                                  left: `${50 + photoPosition.x}%`,
+                                  top: `${50 + photoPosition.y}%`,
+                                  transform: 'translate(-50%, -50%)',
+                                  objectFit: 'cover',
+                                }}
+                              />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-gray-200">
                                 <User size={18} className="text-gray-400" />

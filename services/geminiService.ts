@@ -721,3 +721,92 @@ export const generateWeeklyContentPlan = async (brandContext: BrandIdentity): Pr
       }
     }
   };
+
+
+// Gerar legenda para conteúdo viral
+export const generateViralCaption = async (
+  content: string,
+  contentType: 'single' | 'carousel',
+  category: string,
+  brandContext?: BrandIdentity
+): Promise<{ caption: string; hashtags: string[] }> => {
+  const prompt = `
+    Você é o Social Media Manager da marca "a SU Controle" (plataforma de gestão financeira).
+    
+    Crie uma LEGENDA para Instagram baseada neste conteúdo:
+    
+    TIPO: ${contentType === 'single' ? 'Post Único (frase de impacto)' : 'Carrossel Educativo'}
+    CATEGORIA: ${category}
+    CONTEÚDO: "${content}"
+    
+    TOM DE VOZ OBRIGATÓRIO:
+    - Fale como PESSOA REAL: calmo, gentil, simples, prático
+    - Use: "olha só", "percebe?", "que tal?", "bora?", "vamos juntos"
+    - PROIBIDO: insights, framework, mindset, performance, implementar
+    - Frases CURTAS, palavras SIMPLES, tom ACOLHEDOR
+    
+    REGRAS DA LEGENDA:
+    - Máximo 150 palavras
+    - Comece com gancho que prende atenção
+    - Conecte o conteúdo com a vida real do seguidor
+    - Termine com CTA (salvar, comentar, compartilhar)
+    - PROIBIDO markdown (nada de ** ou *)
+    - Use emojis com moderação (2-4 no máximo)
+    - Quebre em parágrafos curtos
+    
+    REGRAS DE SEGURANÇA:
+    - NUNCA fale sobre investimentos, ações ou fundos
+    - Foque em: economizar, organizar, controlar gastos
+    
+    Retorne APENAS JSON:
+    {
+      "caption": "legenda completa aqui",
+      "hashtags": ["5 a 8 hashtags relevantes sem #"]
+    }
+  `;
+
+  try {
+    const ai = await getAI();
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("Erro ao gerar legenda");
+    trackApiUsage('text', 500);
+    
+    window.dispatchEvent(new CustomEvent('ai-provider-used', { detail: { provider: 'Gemini', type: 'caption' } }));
+    return JSON.parse(text);
+  } catch (error: any) {
+    console.error("Gemini falhou para legenda, tentando fallback:", error.message);
+    
+    try {
+      const profile = await getBrandProfile();
+      const preferredAI = profile?.preferredAI as any;
+      
+      const { text, provider } = await generateTextWithFallback(
+        prompt, 
+        "Você é copywriter da SU Controle. Retorne APENAS JSON válido.", 
+        preferredAI
+      );
+      
+      window.dispatchEvent(new CustomEvent('ai-provider-used', { detail: { provider, type: 'caption' } }));
+      
+      let cleanText = text;
+      const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
+      if (jsonMatch) cleanText = jsonMatch[1];
+      
+      return JSON.parse(cleanText);
+    } catch (fallbackError) {
+      // Retorna legenda padrão
+      return {
+        caption: `${content}\n\nGostou? Salva esse post e compartilha com quem precisa! 💡\n\nAssine a SU Controle e organize suas finanças de forma simples.`,
+        hashtags: ['sucontrole', 'financaspessoais', 'economia', 'organizacaofinanceira', 'dicasfinanceiras']
+      };
+    }
+  }
+};
