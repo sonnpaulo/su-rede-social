@@ -903,16 +903,8 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
 
             {/* Conteúdo */}
             <div className="relative h-full flex flex-col p-6">
-              {/* Categoria no topo */}
-              <div className="flex items-center gap-2 mb-auto">
-                <span className="text-2xl">{cat.emoji}</span>
-                <span 
-                  className="text-lg font-script italic"
-                  style={{ color: style.text, fontFamily: "'Pacifico', cursive" }}
-                >
-                  {cat.label}
-                </span>
-              </div>
+              {/* Espaço no topo para balancear o layout */}
+              <div className="mb-auto" />
 
               {/* Card da Frase */}
               <div className="bg-white rounded-2xl p-5 shadow-lg mx-2 my-4">
@@ -1001,7 +993,6 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                   {currentSlide === 0 && (
                     <>
                       <div className="flex-1 flex flex-col items-center justify-center text-center">
-                        <span className="text-4xl mb-4">{cat.emoji}</span>
                         <h2 
                           className="text-2xl font-bold leading-tight px-4"
                           style={{ color: style.text }}
