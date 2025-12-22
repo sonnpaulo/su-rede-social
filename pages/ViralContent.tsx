@@ -258,11 +258,10 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
         }
       }
       
-      // Salvar no histórico
-      const cat = getCurrentCategory();
+      // Salvar no histórico - só o título da capa
       const allContent = `${carouselTitle}\n\n${carouselSlides.join('\n\n')}`;
       await savePostToHistory({
-        topic: `Carrossel: ${carouselTitle || cat.label}`,
+        topic: carouselTitle || 'Carrossel sem título',
         platform: 'Instagram',
         contentType: 'VIRAL_CAROUSEL',
         caption: allContent,
@@ -732,14 +731,13 @@ export const ViralContent: React.FC<ViralContentProps> = () => {
                   {/* SLIDES 1-3: CONTEÚDO */}
                   {currentSlide >= 1 && currentSlide <= 3 && (
                     <>
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center justify-center mb-4">
                         <span 
-                          className="text-3xl font-bold"
+                          className="text-5xl font-bold"
                           style={{ color: style.text }}
                         >
-                          {currentSlide}.
+                          {currentSlide}
                         </span>
-                        <span style={{ color: style.text }} className="text-lg font-medium">Dica {currentSlide}</span>
                       </div>
                       
                       <div className="flex-1 flex items-center justify-center">
